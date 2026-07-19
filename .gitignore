@@ -1,0 +1,13 @@
+# Binary
+scoreboard
+scoreboard-linux-*
+
+# Database
+*.db
+
+# Environment
+.env
+
+# OS
+.DS_Store
+Thumbs.db

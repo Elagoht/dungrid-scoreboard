@@ -1,0 +1,38 @@
+[Unit]
+Description=Generic Game Scoreboard Backend
+Documentation=https://github.com/furkanbaytekin/generic-game-scoreboard-backend
+After=network.target
+
+[Service]
+Type=simple
+User=scoreboard
+Group=scoreboard
+DynamicUser=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+SystemCallFilter=@default
+SystemCallFilter=~@privileged @resources
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+MemoryDenyWriteExecute=yes
+LockPersonality=yes
+RestrictSUIDSGID=yes
+RemoveIPC=yes
+WorkingDirectory=/var/lib/scoreboard
+StateDirectory=scoreboard
+EnvironmentFile=/etc/scoreboard/.env
+ExecStart=/usr/local/bin/scoreboard
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
