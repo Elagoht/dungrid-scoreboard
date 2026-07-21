@@ -8,28 +8,22 @@ Type=simple
 User=scoreboard
 Group=scoreboard
 DynamicUser=yes
-ProtectSystem=strict
+ProtectSystem=full
 ProtectHome=yes
 PrivateTmp=yes
 NoNewPrivileges=yes
 CapabilityBoundingSet=
-SystemCallFilter=@default
-SystemCallFilter=~@privileged
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 PrivateDevices=yes
-# Go runtime reads /proc/sys/kernel at startup — disabled
-# ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectKernelLogs=yes
-ProtectClock=yes
-# Go runtime reads cgroups for CPU count — disabled
-# ProtectControlGroups=yes
 RestrictRealtime=yes
-# Go runtime may need W+X memory for code generation — disabled
-# MemoryDenyWriteExecute=yes
 LockPersonality=yes
 RestrictSUIDSGID=yes
 RemoveIPC=yes
+# Go runtime needs: ProtectControlGroups, ProtectKernelTunables, MemoryDenyWriteExecute disabled.
+# SystemCallFilter removed — pure Go runtime (modernc sqlite) uses syscalls
+# like rseq, membarrier, futex_waitv not in @default.
 WorkingDirectory=/var/lib/scoreboard
 StateDirectory=scoreboard
 EnvironmentFile=/etc/scoreboard/.env
