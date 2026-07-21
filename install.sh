@@ -60,21 +60,54 @@ rm -f "$TMPFILE"
 
 # --- Config ---
 if [[ ! -f "${CONFIG_DIR}/.env" ]]; then
-    log "Creating default config at ${CONFIG_DIR}/.env"
+    log "Configuration wizard"
+    echo ""
     mkdir -p "$CONFIG_DIR"
-    cat > "${CONFIG_DIR}/.env" <<'EOF'
-PORT=8080
-DB_PATH=/var/lib/scoreboard/scores.db
-HMAC_SECRET=change-me-to-a-random-secret
-TITLE=Game Scoreboard
-CACHE_TTL=60s
-SCORE_WEIGHT_FLOOR=100
-SCORE_WEIGHT_DAMAGE_DEALT=2
-SCORE_WEIGHT_DAMAGE_TAKEN=1
-SCORE_WEIGHT_REVIVE=50
-SCORE_WEIGHT_QUEST=200
+
+    # Generate random HMAC secret
+    RANDOM_SECRET=$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | xxd -p)
+
+    read -p "Scoreboard title [Game Scoreboard]: " TITLE_INPUT
+    TITLE_INPUT=${TITLE_INPUT:-"Game Scoreboard"}
+
+    read -p "Port [8080]: " PORT_INPUT
+    PORT_INPUT=${PORT_INPUT:-"8080"}
+
+    read -p "HMAC secret [generated]: " HMAC_INPUT
+    HMAC_INPUT=${HMAC_INPUT:-"$RANDOM_SECRET"}
+
+    read -p "Cache TTL [60s]: " CACHE_INPUT
+    CACHE_INPUT=${CACHE_INPUT:-"60s"}
+
+    read -p "Score weight: floor [100]: " FLOOR_INPUT
+    FLOOR_INPUT=${FLOOR_INPUT:-"100"}
+
+    read -p "Score weight: damage dealt [2]: " DEALT_INPUT
+    DEALT_INPUT=${DEALT_INPUT:-"2"}
+
+    read -p "Score weight: damage taken [1]: " TAKEN_INPUT
+    TAKEN_INPUT=${TAKEN_INPUT:-"1"}
+
+    read -p "Score weight: revive [50]: " REVIVE_INPUT
+    REVIVE_INPUT=${REVIVE_INPUT:-"50"}
+
+    read -p "Score weight: quest [200]: " QUEST_INPUT
+    QUEST_INPUT=${QUEST_INPUT:-"200"}
+
+    cat > "${CONFIG_DIR}/.env" <<EOF
+PORT=${PORT_INPUT}
+DB_PATH=${DATA_DIR}/scores.db
+HMAC_SECRET=${HMAC_INPUT}
+TITLE=${TITLE_INPUT}
+CACHE_TTL=${CACHE_INPUT}
+SCORE_WEIGHT_FLOOR=${FLOOR_INPUT}
+SCORE_WEIGHT_DAMAGE_DEALT=${DEALT_INPUT}
+SCORE_WEIGHT_DAMAGE_TAKEN=${TAKEN_INPUT}
+SCORE_WEIGHT_REVIVE=${REVIVE_INPUT}
+SCORE_WEIGHT_QUEST=${QUEST_INPUT}
 EOF
-    warn "Config created. Edit ${CONFIG_DIR}/.env and set HMAC_SECRET!"
+    echo ""
+    log "Config saved to ${CONFIG_DIR}/.env"
 else
     log "Config already exists at ${CONFIG_DIR}/.env — skipping"
 fi

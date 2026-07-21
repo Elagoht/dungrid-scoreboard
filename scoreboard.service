@@ -17,11 +17,13 @@ SystemCallFilter=@default
 SystemCallFilter=~@privileged
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 PrivateDevices=yes
-ProtectKernelTunables=yes
+# Go runtime reads /proc/sys/kernel at startup — disabled
+# ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectKernelLogs=yes
 ProtectClock=yes
-ProtectControlGroups=yes
+# Go runtime reads cgroups for CPU count — disabled
+# ProtectControlGroups=yes
 RestrictRealtime=yes
 # Go runtime may need W+X memory for code generation — disabled
 # MemoryDenyWriteExecute=yes
