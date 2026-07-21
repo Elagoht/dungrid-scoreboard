@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // ScoreEntry represents a single score record from the database.
@@ -24,7 +24,7 @@ type ScoreEntry struct {
 // OpenDB opens (or creates) the SQLite database at the given path
 // and runs schema migrations. WAL mode is enabled for better concurrency.
 func OpenDB(path string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", path+"?_journal_mode=WAL&_busy_timeout=5000")
+	db, err := sql.Open("sqlite", path+"?_journal_mode=WAL&_busy_timeout=5000")
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
