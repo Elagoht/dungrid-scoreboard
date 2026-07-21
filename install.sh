@@ -8,7 +8,7 @@ set -euo pipefail
 # hardened systemd service.
 # ============================================================
 
-REPO="furkanbaytekin/generic-game-scoreboard-backend"
+REPO="Elagoht/dungrid-scoreboard"
 BIN_NAME="scoreboard"
 INSTALL_DIR="/usr/local/bin"
 CONFIG_DIR="/etc/scoreboard"
