@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"math"
 	"sync"
 	"time"
@@ -92,6 +93,7 @@ func VerifyHMAC(secret string, timestamp int64, nonce, name string, m Metrics, s
 	mac.Write([]byte(payload))
 	expected := hex.EncodeToString(mac.Sum(nil))
 
+	log.Printf("HMAC_DEBUG secret_len=%d payload=%s expected=%s got=%s", len(secret), payload, expected, signature)
 	if !hmac.Equal([]byte(expected), []byte(signature)) {
 		return fmt.Errorf("invalid signature")
 	}

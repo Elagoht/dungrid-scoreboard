@@ -8,8 +8,8 @@ const bodyKey contextKey = "parsed_body"
 
 // submitBody holds the parsed JSON body after HMAC verification.
 type submitBody struct {
-	Name string `json:"name"`
-	Metrics
+	Name    string  `json:"name"`
+	Metrics Metrics `json:"metrics"`
 }
 
 func contextWithBody(ctx context.Context, b *submitBody) context.Context {
