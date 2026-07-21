@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 // HMACMiddleware returns a middleware that validates HMAC signatures for score submission.
@@ -32,7 +33,7 @@ func HMACMiddleware(secret string, tracker *NonceTracker) func(http.Handler) htt
 				return
 			}
 
-			if err := VerifyHMAC(secret, ts, nonce, body.Name, body.Metrics, sig, tracker, 60); err != nil {
+			if err := VerifyHMAC(secret, ts, nonce, body.Name, body.Metrics, sig, tracker, 60*time.Second); err != nil {
 				WriteError(w, http.StatusUnauthorized, err.Error())
 				return
 			}
