@@ -83,6 +83,12 @@ sanitize_secret() {
     # Allow alphanumeric, dash, underscore — max 256 chars
     [[ "$val" =~ ^[a-zA-Z0-9_/-]+$ ]] && echo "$val"
 }
+sanitize_password() {
+    local val="$1"
+    # Strip newlines, carriage returns, and null bytes — max 128 chars
+    val=$(echo "$val" | tr -d '\n\r\0' | head -c 128)
+    echo "$val"
+}
 
 # --- Config ---
 if [[ ! -f "${CONFIG_DIR}/.env" ]]; then
@@ -126,6 +132,36 @@ if [[ ! -f "${CONFIG_DIR}/.env" ]]; then
         HMAC_INPUT=$(sanitize_secret "$HMAC_INPUT")
         [[ -n "$HMAC_INPUT" ]] && break
         warn "Secret contains invalid characters. Use a-z, A-Z, 0-9, dash, underscore, slash."
+    done
+
+    # --- Admin Password ---
+    echo ""
+    echo "--- Admin Panel Password ---"
+    echo "Set a password to access the feedback/ratings panel at /panel."
+    echo "Leave empty to disable the admin panel."
+    while true; do
+        printf "Admin password [disabled]: "
+        read -r ADMIN_PW_INPUT
+        ADMIN_PW_INPUT=$(sanitize_password "$ADMIN_PW_INPUT")
+        if [[ -z "$ADMIN_PW_INPUT" ]]; then
+            log "Admin panel will be disabled."
+            ADMIN_PW_FINAL=""
+            break
+        fi
+        if [[ ${#ADMIN_PW_INPUT} -lt 4 ]]; then
+            warn "Password must be at least 4 characters."
+            continue
+        fi
+        # Hash the password using the installed binary
+        HASHED=$( "${INSTALL_DIR}/${BIN_NAME}" -hash-password "$ADMIN_PW_INPUT" 2>/dev/null ) || true
+        if [[ -n "$HASHED" ]]; then
+            ADMIN_PW_FINAL="$HASHED"
+            log "Password hashed with bcrypt."
+        else
+            ADMIN_PW_FINAL="$ADMIN_PW_INPUT"
+            warn "Could not hash password (binary not found); stored as plaintext."
+        fi
+        break
     done
 
     # --- Cache TTL ---
@@ -199,6 +235,10 @@ SCORE_WEIGHT_DAMAGE_TAKEN=${TAKEN_INPUT}
 SCORE_WEIGHT_REVIVE=${REVIVE_INPUT}
 SCORE_WEIGHT_QUEST=${QUEST_INPUT}
 EOF
+    # Append admin password separately (bcrypt hashes contain $ signs)
+    if [[ -n "$ADMIN_PW_FINAL" ]]; then
+        echo "ADMIN_PASSWORD=${ADMIN_PW_FINAL}" >> "${CONFIG_DIR}/.env"
+    fi
     echo ""
     echo "-------------------------------------------"
     log "Config saved to ${CONFIG_DIR}/.env"

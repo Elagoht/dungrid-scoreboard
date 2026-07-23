@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"embed"
+	"flag"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -18,6 +20,19 @@ import (
 var staticFiles embed.FS
 
 func main() {
+	// --- CLI flags ---
+	hashPassword := flag.String("hash-password", "", "Generate bcrypt hash for the given password and exit")
+	flag.Parse()
+
+	if *hashPassword != "" {
+		hash, err := internal.HashPassword(*hashPassword)
+		if err != nil {
+			log.Fatalf("Failed to hash password: %v", err)
+		}
+		fmt.Println(hash)
+		return
+	}
+
 	// --- Load .env file (if present) ---
 	if _, err := os.Stat(".env"); err == nil {
 		if err := internal.LoadEnvFile(".env"); err != nil {
