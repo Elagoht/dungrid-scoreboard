@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Admin Panel — Ratings</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: #0f0f0f;
+  color: #e0e0e0;
+  min-height: 100vh;
+}
+header {
+  background: #1a1a1a;
+  padding: 0.75rem 1.5rem;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #222;
+  position: sticky; top: 0; z-index: 10;
+}
+header h1 { font-size: 1.125rem; color: #fff; }
+header .count { font-size: 0.8rem; color: #888; margin-left: 0.5rem; }
+header a { color: #ff6b6b; text-decoration: none; font-size: 0.875rem; }
+header a:hover { text-decoration: underline; }
+.table-wrap {
+  overflow-x: auto;
+  padding: 1rem;
+}
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  min-width: 1400px;
+}
+th {
+  background: #1a1a1a;
+  padding: 0.5rem 0.625rem;
+  text-align: left;
+  font-weight: 600;
+  color: #aaa;
+  border-bottom: 2px solid #333;
+  position: sticky; top: 48px; z-index: 5;
+}
+td {
+  padding: 0.375rem 0.625rem;
+  border-bottom: 1px solid #1a1a1a;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+tr:hover td { background: #151520; }
+.rating-cell { text-align: center; }
+.rating-5 { color: #4caf50; }
+.rating-4 { color: #8bc34a; }
+.rating-3 { color: #ffc107; }
+.rating-2 { color: #ff9800; }
+.rating-1 { color: #f44336; }
+.loading { text-align: center; padding: 3rem; color: #888; }
+.error-msg { text-align: center; padding: 2rem; color: #ff6b6b; }
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Ratings & Feedback<span class="count" id="count"></span></h1></div>
+  <a href="/panel/logout">Logout</a>
+</header>
+<div class="table-wrap">
+  <div class="loading" id="loading">Loading…</div>
+  <div class="error-msg" id="error" style="display:none"></div>
+  <table id="table" style="display:none">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Fun</th>
+        <th>Balance</th>
+        <th>Visuals</th>
+        <th>Clarity</th>
+        <th>Perf</th>
+        <th>Audio</th>
+        <th>Diff</th>
+        <th>Comment</th>
+        <th>Contact</th>
+        <th>Mode</th>
+        <th>Version</th>
+        <th>Locale</th>
+        <th>Duration</th>
+        <th>Units</th>
+        <th>AI</th>
+        <th>Seed</th>
+        <th>Turns</th>
+        <th>Result</th>
+        <th>Specials</th>
+        <th>Client TS</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+<script>
+const ratingClass = v => 'rating-' + v;
+
+async function load() {
+  try {
+    const res = await fetch('/panel/data');
+    if (!res.ok) {
+      document.getElementById('error').textContent = res.status === 401 ? 'Session expired — please login again.' : 'Failed to load data.';
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('loading').style.display = 'none';
+      if (res.status === 401) setTimeout(() => location.reload(), 2000);
+      return;
+    }
+    const data = await res.json();
+    document.getElementById('count').textContent = '(' + data.length + ')';
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('table').style.display = '';
+
+    const tbody = document.getElementById('tbody');
+    tbody.innerHTML = data.map(r => {
+      const contact = r.contact_name || r.contact_email
+        ? (r.contact_name + (r.contact_email ? ' <' + r.contact_email + '>' : ''))
+        : '';
+      return '<tr>' +
+        '<td>' + r.id + '</td>' +
+        '<td class="rating-cell ' + ratingClass(r.fun) + '">' + r.fun + '</td>' +
+        '<td class="rating-cell ' + ratingClass(r.balance) + '">' + r.balance + '</td>' +
+        '<td class="rating-cell ' + ratingClass(r.visuals) + '">' + r.visuals + '</td>' +
+        '<td class="rating-cell ' + ratingClass(r.clarity) + '">' + r.clarity + '</td>' +
+        '<td class="rating-cell ' + ratingClass(r.performance) + '">' + r.performance + '</td>' +
+        '<td class="rating-cell ' + ratingClass(r.audio) + '">' + r.audio + '</td>' +
+        '<td class="rating-cell ' + ratingClass(r.difficulty) + '">' + r.difficulty + '</td>' +
+        '<td>' + esc(r.comment) + '</td>' +
+        '<td>' + esc(contact) + '</td>' +
+        '<td>' + esc(r.game_mode) + '</td>' +
+        '<td>' + esc(r.version) + '</td>' +
+        '<td>' + esc(r.locale) + '</td>' +
+        '<td>' + (r.match_duration_sec || '') + '</td>' +
+        '<td>' + (r.units_deployed || '') + '</td>' +
+        '<td>' + esc(r.ai_difficulty) + '</td>' +
+        '<td>' + esc(r.seed) + '</td>' +
+        '<td>' + (r.turns_played || '') + '</td>' +
+        '<td>' + esc(r.result) + '</td>' +
+        '<td>' + esc(r.specials_used) + '</td>' +
+        '<td>' + esc(r.client_ts) + '</td>' +
+        '<td>' + esc(r.created_at) + '</td>' +
+        '</tr>';
+    }).join('');
+  } catch(e) {
+    document.getElementById('error').textContent = 'Error: ' + e.message;
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('loading').style.display = 'none';
+  }
+}
+
+function esc(s) {
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+load();
+</script>
+</body>
+</html>

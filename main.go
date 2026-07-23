@@ -29,11 +29,15 @@ func main() {
 	port := internal.Getenv("PORT", "8080")
 	dbPath := internal.Getenv("DB_PATH", "scores.db")
 	hmacSecret := internal.Getenv("HMAC_SECRET", "")
+	adminPassword := internal.Getenv("ADMIN_PASSWORD", "")
 	title := internal.Getenv("TITLE", "Game Scoreboard")
 	cacheTTL := parseDuration(internal.Getenv("CACHE_TTL", "60s"), 60*time.Second)
 
 	if hmacSecret == "" {
 		log.Println("WARNING: HMAC_SECRET is empty — score submission is unprotected")
+	}
+	if adminPassword == "" {
+		log.Println("WARNING: ADMIN_PASSWORD is not set — admin panel is disabled")
 	}
 
 	// --- Database ---
@@ -64,6 +68,18 @@ func main() {
 	}
 	indexTpl := template.Must(template.New("index").Parse(string(indexHTML)))
 
+	adminLoginHTML, err := staticFiles.ReadFile("static/admin_login.html")
+	if err != nil {
+		log.Fatalf("Failed to read embedded admin_login.html: %v", err)
+	}
+	adminLoginTpl := template.Must(template.New("admin_login").Parse(string(adminLoginHTML)))
+
+	adminPanelHTML, err := staticFiles.ReadFile("static/admin_panel.html")
+	if err != nil {
+		log.Fatalf("Failed to read embedded admin_panel.html: %v", err)
+	}
+	adminPanelTpl := template.Must(template.New("admin_panel").Parse(string(adminPanelHTML)))
+
 	// --- Handlers ---
 	h := &internal.Handler{
 		DB:         db,
@@ -90,6 +106,23 @@ func main() {
 		hmacMw := internal.HMACMiddleware(hmacSecret, nonceTracker)
 		hmacMw(http.HandlerFunc(h.SubmitScore)).ServeHTTP(w, r)
 	})
+
+	// Ratings/feedback endpoint (HMAC-protected)
+	mux.HandleFunc("/api/ratings", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			internal.HandleCORS(w, r)
+			return
+		}
+		hmacMw := internal.RatingsHMACMiddleware(hmacSecret, nonceTracker)
+		hmacMw(http.HandlerFunc(h.SubmitRating)).ServeHTTP(w, r)
+	})
+
+	// Hidden admin panel
+	if adminPassword != "" {
+		adminHandler := internal.NewAdminHandler(db, hmacSecret, adminPassword, adminLoginTpl, adminPanelTpl)
+		mux.Handle("/panel", adminHandler)
+		mux.Handle("/panel/", adminHandler)
+	}
 
 	// Serve assets from disk if present (logo, favicon)
 	if hasLogo || hasFavicon {

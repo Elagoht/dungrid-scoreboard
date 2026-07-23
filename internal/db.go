@@ -56,6 +56,33 @@ func migrate(db *sql.DB) error {
 		);
 		CREATE INDEX IF NOT EXISTS idx_scores_score ON scores(score DESC);
 		CREATE INDEX IF NOT EXISTS idx_scores_name ON scores(name);
+
+		CREATE TABLE IF NOT EXISTS ratings (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			fun INTEGER NOT NULL CHECK(fun >= 1 AND fun <= 5),
+			balance INTEGER NOT NULL CHECK(balance >= 1 AND balance <= 5),
+			visuals INTEGER NOT NULL CHECK(visuals >= 1 AND visuals <= 5),
+			clarity INTEGER NOT NULL CHECK(clarity >= 1 AND clarity <= 5),
+			performance INTEGER NOT NULL CHECK(performance >= 1 AND performance <= 5),
+			audio INTEGER NOT NULL CHECK(audio >= 1 AND audio <= 5),
+			difficulty INTEGER NOT NULL CHECK(difficulty >= 1 AND difficulty <= 5),
+			comment TEXT DEFAULT '',
+			contact_name TEXT DEFAULT '',
+			contact_email TEXT DEFAULT '',
+			game_mode TEXT DEFAULT '',
+			version TEXT DEFAULT '',
+			locale TEXT DEFAULT '',
+			match_duration_sec INTEGER DEFAULT 0,
+			units_deployed INTEGER DEFAULT 0,
+			ai_difficulty TEXT DEFAULT '',
+			seed TEXT DEFAULT '',
+			turns_played INTEGER DEFAULT 0,
+			result TEXT DEFAULT '',
+			specials_used TEXT DEFAULT '',
+			client_ts TEXT DEFAULT '',
+			created_at TEXT NOT NULL DEFAULT (datetime('now'))
+		);
+		CREATE INDEX IF NOT EXISTS idx_ratings_created ON ratings(created_at DESC);
 	`)
 	return err
 }
@@ -117,6 +144,86 @@ func GetRank(db *sql.DB, name string) (rank int, bestScore int, err error) {
 	}
 
 	return rank, bestScore, nil
+}
+
+// RatingEntry represents a single rating/feedback record.
+type RatingEntry struct {
+	ID               int    `json:"id"`
+	Fun              int    `json:"fun"`
+	Balance          int    `json:"balance"`
+	Visuals          int    `json:"visuals"`
+	Clarity          int    `json:"clarity"`
+	Performance      int    `json:"performance"`
+	Audio            int    `json:"audio"`
+	Difficulty       int    `json:"difficulty"`
+	Comment          string `json:"comment"`
+	ContactName      string `json:"contact_name"`
+	ContactEmail     string `json:"contact_email"`
+	GameMode         string `json:"game_mode"`
+	Version          string `json:"version"`
+	Locale           string `json:"locale"`
+	MatchDurationSec int    `json:"match_duration_sec"`
+	UnitsDeployed    int    `json:"units_deployed"`
+	AIDifficulty     string `json:"ai_difficulty"`
+	Seed             string `json:"seed"`
+	TurnsPlayed      int    `json:"turns_played"`
+	Result           string `json:"result"`
+	SpecialsUsed     string `json:"specials_used"`
+	ClientTS         string `json:"client_ts"`
+	CreatedAt        string `json:"created_at"`
+}
+
+// InsertRating inserts a new rating/feedback record.
+func InsertRating(db *sql.DB, r RatingEntry) (int64, error) {
+	res, err := db.Exec(
+		`INSERT INTO ratings (fun, balance, visuals, clarity, performance, audio, difficulty,
+			comment, contact_name, contact_email, game_mode, version, locale,
+			match_duration_sec, units_deployed, ai_difficulty, seed, turns_played,
+			result, specials_used, client_ts)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		r.Fun, r.Balance, r.Visuals, r.Clarity, r.Performance, r.Audio, r.Difficulty,
+		r.Comment, r.ContactName, r.ContactEmail, r.GameMode, r.Version, r.Locale,
+		r.MatchDurationSec, r.UnitsDeployed, r.AIDifficulty, r.Seed, r.TurnsPlayed,
+		r.Result, r.SpecialsUsed, r.ClientTS,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("insert rating: %w", err)
+	}
+	return res.LastInsertId()
+}
+
+// GetAllRatings returns all ratings ordered by newest first.
+func GetAllRatings(db *sql.DB) ([]RatingEntry, error) {
+	rows, err := db.Query(
+		`SELECT id, fun, balance, visuals, clarity, performance, audio, difficulty,
+			comment, contact_name, contact_email, game_mode, version, locale,
+			match_duration_sec, units_deployed, ai_difficulty, seed, turns_played,
+			result, specials_used, client_ts, created_at
+		 FROM ratings ORDER BY created_at DESC`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query ratings: %w", err)
+	}
+	defer rows.Close()
+
+	var entries []RatingEntry
+	for rows.Next() {
+		var e RatingEntry
+		if err := rows.Scan(
+			&e.ID, &e.Fun, &e.Balance, &e.Visuals, &e.Clarity, &e.Performance,
+			&e.Audio, &e.Difficulty, &e.Comment, &e.ContactName, &e.ContactEmail,
+			&e.GameMode, &e.Version, &e.Locale, &e.MatchDurationSec, &e.UnitsDeployed,
+			&e.AIDifficulty, &e.Seed, &e.TurnsPlayed, &e.Result, &e.SpecialsUsed,
+			&e.ClientTS, &e.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan rating: %w", err)
+		}
+		entries = append(entries, e)
+	}
+	if entries == nil {
+		entries = []RatingEntry{}
+	}
+	return entries, rows.Err()
 }
 
 func scanScores(rows *sql.Rows) ([]ScoreEntry, error) {
